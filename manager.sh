@@ -96,6 +96,7 @@ function run_nginx(){
 
 function _php_exec(){
     run_cmd "docker exec $php_name docker-php-ext-install pdo_mysql"
+    run_cmd "docker exec $php_name composer install -d /var/www/cat-bills"
     run_cmd "docker exec $php_name php /var/www/cat-bills/artisan config:cache"
     run_cmd "docker exec $php_name cp /var/www/cat-bills/.env.example /var/www/cat-bills/.env"
     run_cmd "docker exec $php_name php /var/www/cat-bills/artisan key:generate"
