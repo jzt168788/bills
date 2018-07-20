@@ -1,8 +1,9 @@
 #!/bin/bash
 
-nginx_image_name='nginx:1.10.3'
-mysql_image_name='mysql:5.6'
-php_image_name='php:7.0-fpm'
+nginx_image_name='jinzhuotao/nginx'
+mysql_image_name='jinzhuotao/mysql'
+php_image_name='jinzhuotao/phpfpm'
+#php_image_name='php:7.0-fpm'
 
 nginx_name='dev_nginx'
 mysql_name='dev_mysql'
@@ -65,14 +66,19 @@ function del_mysql(){
 }
 
 function run_mysql(){
-    local cmd="docker run -d -p 3307:3306 -e MYSQL_ROOT_PASSWORD=123qwe --name $mysql_name $mysql_image_name"
-    run_cmd "$cmd"
+    local cmd="$cmd -p 3307:3306 -e MYSQL_ROOT_PASSWORD=123qwe"
+    cmd="$cmd -v $now_dir_path/docker/mysql/mysql-init:/docker-entrypoint-initdb.d"
+    run_cmd "docker run -d $cmd --name $mysql_name $mysql_image_name"
 }
 
 function run_php(){
-    local cmd="docker run -d -v $now_dir_path/:/var/www/ -p 9001:9000 --link $mysql_name:mysql --name $php_name $php_image_name"
+    local cmd=" --restart always"
 
-    run_cmd "$cmd"
+    cmd="$cmd -v $now_dir_path/:/var/www/"
+    cmd="$cmd -v $now_dir_path/docker/php-fpm/php-base.ini:/usr/local/etc/php/php.ini"
+    cmd="$cmd -p 9001:9000 --link $mysql_name:mysql"
+
+    run_cmd "docker run -d $cmd --name $php_name $php_image_name"
 
     _php_exec
 }
@@ -90,10 +96,10 @@ function run_nginx(){
 
 function _php_exec(){
     run_cmd "docker exec $php_name docker-php-ext-install pdo_mysql"
+    run_cmd "docker exec $php_name php /var/www/cat-bills/artisan config:cache"
     run_cmd "docker exec $php_name cp /var/www/cat-bills/.env.example /var/www/cat-bills/.env"
     run_cmd "docker exec $php_name php /var/www/cat-bills/artisan key:generate"
-    run_cmd "docker exec $php_name php /var/www/cat-bills/artisan config:cache"
-
+    run_cmd "docker exec $php_name php /var/www/cat-bills/artisan migrate"
 }
 
 function start_image(){
